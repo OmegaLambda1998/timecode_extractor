@@ -17,10 +17,12 @@ There are two ways to do this, either video a command, or through an input csv f
 ## Command
 
 ```
-python timecode_extractor.py -v path/to/sequence.mp4 -t "HH:MM:SS:FF" "HH:MM:SS:FF"
+python timecode_extractor.py -v path/to/sequence.mp4 -t "HH:MM:SS:FF" "HH:MM:SS:FF" -s "source"
 ```
 
 Here "HH" is the hour, "MM" is the minute, "SS" is the second, and "FF" is the frame, e.g. "00:01:43:17". Assumes there are 25 frames / second.
+
+`source` is the source of the clip, currently only "Nat Geo" is supported.
 
 You can pass as many times as you want to the code, and it will print out the results.
 

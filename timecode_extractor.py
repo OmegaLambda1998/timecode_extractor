@@ -2,7 +2,7 @@ import cv2
 import argparse
 from skimage.metrics import structural_similarity as ssim
 
-digit_images = [cv2.imread(f'digits/{i}.jpg', cv2.IMREAD_GRAYSCALE) for i in range(10)]
+digit_images = {"Nat Geo": [cv2.imread(f'digits/Nat Geo/{i}.jpg', cv2.IMREAD_GRAYSCALE) for i in range(10)]}
 
 """
     get_frame_at_time(video_path, target_time)
@@ -137,7 +137,7 @@ Read a digit from an image.
 - `digit_image`: Image of the digit to read.
 - `i`: Index of the digit.
 """
-def read_digit_from_image(digit_image):
+def read_digit_from_image(digit_image, source="Nat Geo"):
     gray = cv2.cvtColor(digit_image, cv2.COLOR_BGR2GRAY)
     _, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
     contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
@@ -145,7 +145,7 @@ def read_digit_from_image(digit_image):
     for contour in contours:
         x, y, w, h = cv2.boundingRect(contour)
         roi = thresh[y:y + h, x:x + w]
-        for (i, digit_image) in enumerate(digit_images):
+        for (i, digit_image) in enumerate(digit_images[source]):
             roi = pad_image_to_match_dimensions(roi, digit_image)
             similarity_index, _ = ssim(roi, digit_image, full=True)
             if similarity_index > digits[i]:
@@ -194,6 +194,7 @@ def get_args():
     cl_group = parser.add_argument_group("Command Line Arguments", "Extract timecodes from within the terminal.")
     cl_group.add_argument("-v", "--video", type=str, required=False, help="Path to the video file.")
     cl_group.add_argument("-t", "--time", type=str, required=False, nargs="*", help="Timecode to extract in the format HH:MM:SS:frame.")
+    cl_group.add_argument("-s", "--source", type=str, required=False, help="Source of the video. Currently only supports 'Nat Geo'.")
     csv_group = parser.add_argument_group("CSV Arguments", "Extract timecodes from a CSV file.")
     csv_group.add_argument("-i", "--input", type=str, required=False, help="Path to the CSV file.")
     csv_group.add_argument("-o", "--output", type=str, required=False, help="Output path for the CSV file.")
@@ -227,13 +228,17 @@ def main(args):
             timecode_digits_in = split_timecode_image(timecode_image_in, source_reel)
             timecode_digits_out = split_timecode_image(timecode_image_out, source_reel)
             if timecode_digits_in is not None:
-                digits_in = [read_digit_from_image(digit_image) for digit_image in timecode_digits_in]
+                digits_in = [read_digit_from_image(digit_image, source_reel) for digit_image in timecode_digits_in]
                 print(f"Timecode at input timecode: {digits_in[0]}{digits_in[1]}:{digits_in[2]}{digits_in[3]}:{digits_in[4]}{digits_in[5]}:{digits_in[6]}{digits_in[7]}")
                 output_csv["Source In"].append(f"{digits_in[0]}{digits_in[1]}:{digits_in[2]}{digits_in[3]}:{digits_in[4]}{digits_in[5]}:{digits_in[6]}{digits_in[7]}")
+            else:
+                output_csv["Source In"].append("None")
             if timecode_digits_out is not None:
-                digits_out = [read_digit_from_image(digit_image) for digit_image in timecode_digits_out]
+                digits_out = [read_digit_from_image(digit_image, source_reel) for digit_image in timecode_digits_out]
                 print(f"Timecode at output timecode: {digits_out[0]}{digits_out[1]}:{digits_out[2]}{digits_out[3]}:{digits_out[4]}{digits_out[5]}:{digits_out[6]}{digits_out[7]}")
                 output_csv["Source Out"].append(f"{digits_out[0]}{digits_out[1]}:{digits_out[2]}{digits_out[3]}:{digits_out[4]}{digits_out[5]}:{digits_out[6]}{digits_out[7]}")
+            else:
+                output_csv["Source Out"].append("None")
         output_txt = ""
         output_txt += f"{', '.join(output_csv.keys())}\n"
         for i in range(len(output_csv["Source In"])):
@@ -254,7 +259,7 @@ def main(args):
             digits = []
             for i in range(len(timecode_digits)):
                 digit_image = timecode_digits[i]
-                digit = read_digit_from_image(digit_image)
+                digit = read_digit_from_image(digit_image, args.source)
                 digits.append(digit)
             print(f"Timecode at input timecode {t}: {digits[0]}{digits[1]}:{digits[2]}{digits[3]}:{digits[4]}{digits[5]}:{digits[6]}{digits[7]}")
 
